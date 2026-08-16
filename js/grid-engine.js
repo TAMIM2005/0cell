@@ -457,15 +457,15 @@ class GridEngine {
         sheet.colWidths[resizingCol] = newW;
 
         // Live DOM Column Width Update
+        const colEl = document.querySelector(`col[data-col="${resizingCol}"]`);
+        if (colEl) {
+          colEl.style.width = `${newW}px`;
+        }
         const colHeader = document.querySelector(`.grid-col-header[data-col="${resizingCol}"]`);
         if (colHeader) {
           colHeader.style.width = `${newW}px`;
           colHeader.style.minWidth = `${newW}px`;
         }
-        document.querySelectorAll(`.grid-cell[data-col="${resizingCol}"]`).forEach(cell => {
-          cell.style.width = `${newW}px`;
-          cell.style.minWidth = `${newW}px`;
-        });
       } else if (resizingRow !== null) {
         const diffY = e.clientY - startY;
         const newH = Math.max(18, startHeight + diffY);
@@ -572,6 +572,21 @@ class GridEngine {
     const table = document.createElement('table');
     table.className = 'sheet-grid-table';
 
+    // 0. Colgroup for explicit column widths
+    const colgroup = document.createElement('colgroup');
+    const cornerCol = document.createElement('col');
+    cornerCol.style.width = '48px';
+    colgroup.appendChild(cornerCol);
+
+    for (let c = 0; c < sheet.numCols; c++) {
+      const colEl = document.createElement('col');
+      colEl.dataset.col = c;
+      const customW = sheet.colWidths && sheet.colWidths[c] ? sheet.colWidths[c] : 110;
+      colEl.style.width = `${customW}px`;
+      colgroup.appendChild(colEl);
+    }
+    table.appendChild(colgroup);
+
     // 1. Column Headers (A, B, C...)
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
@@ -592,16 +607,16 @@ class GridEngine {
       th.dataset.col = c;
       th.style.position = 'relative';
 
-      const customW = sheet.colWidths && sheet.colWidths[c];
-      th.style.width = customW ? `${customW}px` : '110px';
-      th.style.minWidth = customW ? `${customW}px` : '110px';
+      const customW = sheet.colWidths && sheet.colWidths[c] ? sheet.colWidths[c] : 110;
+      th.style.width = `${customW}px`;
+      th.style.minWidth = `${customW}px`;
 
       const colLetter = FormulaEngine.colToLetter(c);
       th.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:center;position:relative;height:100%;">
+        <div style="display:flex;align-items:center;justify-content:center;position:relative;height:100%;pointer-events:none;">
           <span>${colLetter}</span>
           ${sheet.autoFilterRange && c >= sheet.autoFilterRange.startCol && c <= sheet.autoFilterRange.endCol ? `
-            <span class="col-filter-btn" title="Filter" onclick="event.stopPropagation(); window.zeroCellApp.dataTools.openFilterDropdown(${c}, event.clientX, event.clientY)">▾</span>
+            <span class="col-filter-btn" title="Filter" style="pointer-events:auto;" onclick="event.stopPropagation(); window.zeroCellApp.dataTools.openFilterDropdown(${c}, event.clientX, event.clientY)">▾</span>
           ` : ''}
         </div>
         <div class="col-resize-handle" data-col="${c}"></div>
