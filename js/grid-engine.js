@@ -1525,8 +1525,9 @@ class GridEngine {
         return;
       }
       if (key === 's') {
+        if (this.isEditing) this.commitCellEdit(0, 0);
         this.app.autoSaveEngine?.saveInstant();
-        this.app.showToast('Spreadsheet saved instantly!', 'success');
+        this.app.showToast('💾 Saved All Sheets & Project Data Instantly!', 'success');
         e.preventDefault();
         return;
       }
