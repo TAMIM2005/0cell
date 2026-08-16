@@ -615,14 +615,21 @@ body, html {
 }
 
 .sheet-grid-table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   font-size: 12px;
   color: var(--text-primary);
   background: var(--bg-surface);
 }
 
-/* Headers */
+/* Headers - 100% Freeze Column Headers (A, B, C...) on Scroll */
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
 .grid-col-header {
   position: sticky;
   top: 0;
@@ -634,7 +641,7 @@ body, html {
   font-size: 11px;
   color: var(--text-secondary);
   user-select: none;
-  z-index: 40;
+  z-index: 100;
   transition: background 0.1s;
 }
 .grid-col-header:hover {
@@ -711,7 +718,7 @@ body, html {
   border: 1px solid var(--border-default);
   width: 48px;
   height: 30px;
-  z-index: 50;
+  z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
