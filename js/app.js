@@ -245,16 +245,20 @@ class AutoSaveEngine {
       // 1. Try instant restore from LocalStorage
       const localStr = localStorage.getItem('0cell_current_active_proj');
       if (localStr) {
-        const payload = JSON.parse(localStr);
-        if (payload && payload.workbook) {
-          this.applyProjectPayload(payload);
-          return true;
+        try {
+          const payload = JSON.parse(localStr);
+          if (payload && payload.workbook && payload.workbook.sheets && payload.workbook.sheets.length > 0) {
+            this.applyProjectPayload(payload);
+            return true;
+          }
+        } catch (e) {
+          localStorage.removeItem('0cell_current_active_proj');
         }
       }
 
       // 2. Try to load the latest active project from IndexedDB
       const lastProject = await ZeroStorage.getLastActiveProject();
-      if (lastProject && lastProject.workbook) {
+      if (lastProject && lastProject.workbook && lastProject.workbook.sheets && lastProject.workbook.sheets.length > 0) {
         this.applyProjectPayload(lastProject);
         return true;
       }
@@ -262,10 +266,14 @@ class AutoSaveEngine {
       // 3. Fallback to SessionStorage
       const sessStr = sessionStorage.getItem('0cell_current_active_proj');
       if (sessStr) {
-        const payload = JSON.parse(sessStr);
-        if (payload && payload.workbook) {
-          this.applyProjectPayload(payload);
-          return true;
+        try {
+          const payload = JSON.parse(sessStr);
+          if (payload && payload.workbook && payload.workbook.sheets && payload.workbook.sheets.length > 0) {
+            this.applyProjectPayload(payload);
+            return true;
+          }
+        } catch (e) {
+          sessionStorage.removeItem('0cell_current_active_proj');
         }
       }
 
