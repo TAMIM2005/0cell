@@ -483,6 +483,30 @@ class ZeroCellApp {
     }, 2000);
   }
 
+  // Setup Native File Handle Watcher (File System Access API): Live 2-Way Sync with Excel File
+  setupNativeFileHandleWatcher(handle) {
+    if (!handle) return;
+    if (this._fileWatcherInterval) clearInterval(this._fileWatcherInterval);
+
+    let lastModTime = 0;
+    handle.getFile().then(f => { lastModTime = f.lastModified; }).catch(() => {});
+
+    this._fileWatcherInterval = setInterval(async () => {
+      try {
+        const freshFile = await handle.getFile();
+        if (freshFile && freshFile.lastModified > lastModTime) {
+          lastModTime = freshFile.lastModified;
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            this.xlsxIO.importXLSX(evt.target.result, freshFile.name);
+            this.showToast(`🔄 Live Sync: MS Excel changes imported into 0cell!`, 'info');
+          };
+          reader.readAsArrayBuffer(freshFile);
+        }
+      } catch (err) {}
+    }, 1500);
+  }
+
   // Initialize a completely clean, pristine, empty spreadsheet
   initBlankSheet() {
     const sheet = this.workbook.getActiveSheet();
@@ -1024,26 +1048,54 @@ class ZeroCellApp {
     });
 
     const fileInput = document.getElementById('file-input-open');
-    document.getElementById('file-open')?.addEventListener('click', () => {
-      fileInput.click();
+    document.getElementById('file-open')?.addEventListener('click', async () => {
       fileModal.classList.remove('active');
-    });
 
-    document.getElementById('file-open-recents')?.addEventListener('click', () => {
-      fileModal.classList.remove('active');
-      this.openRecentManager();
+      // Native W3C File System Access API for Live Real-Time Excel Synchronization
+      if (window.showOpenFilePicker) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{
+              description: 'Spreadsheet Files',
+              accept: {
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                'application/vnd.ms-excel': ['.xls'],
+                'text/csv': ['.csv']
+              }
+            }],
+            multiple: false
+          });
+          if (handle) {
+            this.activeFileSystemHandle = handle;
+            const file = await handle.getFile();
+            this.activeFileHandle = file;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              this.xlsxIO.importXLSX(evt.target.result, file.name);
+              this.setupNativeFileHandleWatcher(handle);
+            };
+            reader.readAsArrayBuffer(file);
+            return;
+          }
+        } catch (e) {
+          // User cancelled picker or fallback
+        }
+      }
+      fileInput.click();
     });
 
     fileInput?.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
+      this.activeFileHandle = file;
       const fileNameLower = file.name.toLowerCase();
 
       if (fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.ods')) {
         const reader = new FileReader();
         reader.onload = (evt) => {
           this.xlsxIO.importXLSX(evt.target.result, file.name);
+          this.setupLiveFileWatcher(file);
         };
         reader.readAsArrayBuffer(file);
       } else if (fileNameLower.endsWith('.0cell') || fileNameLower.endsWith('.json')) {
@@ -1056,6 +1108,7 @@ class ZeroCellApp {
         const reader = new FileReader();
         reader.onload = (evt) => {
           this.xlsxIO.importCSV(evt.target.result);
+          this.setupLiveFileWatcher(file);
         };
         reader.readAsText(file);
       }
