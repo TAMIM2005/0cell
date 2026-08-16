@@ -179,9 +179,12 @@ class AutoSaveEngine {
       // 1. Unlimited IndexedDB Save
       ZeroStorage.saveProject(projectData);
 
-      // 2. Fast Session Memory & Live Excel Binary Cache
+      // 2. Fast Synchronous LocalStorage & SessionStorage Backup
       try {
-        sessionStorage.setItem('0cell_current_active_proj', JSON.stringify(projectData));
+        const jsonStr = JSON.stringify(projectData);
+        localStorage.setItem('0cell_current_active_proj', jsonStr);
+        sessionStorage.setItem('0cell_current_active_proj', jsonStr);
+      } catch (e) {}
         
         // Auto-generate live native Excel (.xlsx) payload in background
         if (this.app.xlsxIO && typeof XLSX !== 'undefined') {
@@ -239,14 +242,24 @@ class AutoSaveEngine {
 
   async restoreSession() {
     try {
-      // 1. Try to load the latest active project from IndexedDB
+      // 1. Try instant restore from LocalStorage
+      const localStr = localStorage.getItem('0cell_current_active_proj');
+      if (localStr) {
+        const payload = JSON.parse(localStr);
+        if (payload && payload.workbook) {
+          this.applyProjectPayload(payload);
+          return true;
+        }
+      }
+
+      // 2. Try to load the latest active project from IndexedDB
       const lastProject = await ZeroStorage.getLastActiveProject();
       if (lastProject && lastProject.workbook) {
         this.applyProjectPayload(lastProject);
         return true;
       }
 
-      // 2. Fallback to session memory
+      // 3. Fallback to SessionStorage
       const sessStr = sessionStorage.getItem('0cell_current_active_proj');
       if (sessStr) {
         const payload = JSON.parse(sessStr);
