@@ -370,10 +370,10 @@ class GridEngine {
   }
 
   createInCellEditor() {
-    this.inCellEditor = document.createElement('input');
-    this.inCellEditor.type = 'text';
+    this.inCellEditor = document.createElement('textarea');
     this.inCellEditor.className = 'in-cell-editor';
     this.inCellEditor.id = 'in-cell-editor';
+    this.inCellEditor.rows = 1;
     document.body.appendChild(this.inCellEditor);
 
     this.inCellEditor.addEventListener('input', () => {
@@ -381,13 +381,27 @@ class GridEngine {
       const active = sheet.activeCell || { col: 0, row: 0 };
       const formulaInput = document.getElementById('formula-input');
       if (formulaInput) formulaInput.value = this.inCellEditor.value;
-      this.app.autoSaveEngine?.triggerSave();
+
+      // Auto-expand editor height for unlimited text & multi-line content
+      this.inCellEditor.style.height = 'auto';
+      this.inCellEditor.style.height = `${Math.max(28, this.inCellEditor.scrollHeight)}px`;
     });
 
     this.inCellEditor.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        this.commitCellEdit(e.shiftKey ? -1 : 1, 0);
-        e.preventDefault();
+        if (e.altKey || e.shiftKey) {
+          // Alt+Enter or Shift+Enter inserts a new line inside cell like Excel!
+          const start = this.inCellEditor.selectionStart;
+          const end = this.inCellEditor.selectionEnd;
+          const val = this.inCellEditor.value;
+          this.inCellEditor.value = val.substring(0, start) + "\n" + val.substring(end);
+          this.inCellEditor.selectionStart = this.inCellEditor.selectionEnd = start + 1;
+          this.inCellEditor.dispatchEvent(new Event('input'));
+          e.preventDefault();
+        } else {
+          this.commitCellEdit(1, 0);
+          e.preventDefault();
+        }
       } else if (e.key === 'Tab') {
         this.commitCellEdit(0, e.shiftKey ? -1 : 1);
         e.preventDefault();
@@ -512,8 +526,8 @@ class GridEngine {
     this.inCellEditor.style.display = 'block';
     this.inCellEditor.style.left = `${rect.left + window.scrollX}px`;
     this.inCellEditor.style.top = `${rect.top + window.scrollY}px`;
-    this.inCellEditor.style.width = `${Math.max(rect.width, 100)}px`;
-    this.inCellEditor.style.height = `${rect.height}px`;
+    this.inCellEditor.style.minWidth = `${Math.max(rect.width, 140)}px`;
+    this.inCellEditor.style.minHeight = `${Math.max(rect.height, 28)}px`;
     this.inCellEditor.style.fontSize = cell?.style?.fontSize ? `${cell.style.fontSize}px` : '12px';
     this.inCellEditor.style.fontWeight = cell?.style?.bold ? 'bold' : 'normal';
     this.inCellEditor.style.textAlign = cell?.style?.align || 'left';
