@@ -417,6 +417,84 @@ class GridEngine {
         document.querySelectorAll('.context-menu').forEach(m => m.classList.remove('active'));
       }
     });
+
+    // Column & Row Drag Resize Event Listeners
+    let resizingCol = null;
+    let resizingRow = null;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+
+    document.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('col-resize-handle')) {
+        e.preventDefault();
+        e.stopPropagation();
+        resizingCol = parseInt(e.target.dataset.col, 10);
+        startX = e.clientX;
+
+        const sheet = this.app.workbook.getActiveSheet();
+        startWidth = sheet.colWidths && sheet.colWidths[resizingCol] ? sheet.colWidths[resizingCol] : 110;
+        document.body.style.cursor = 'col-resize';
+      } else if (e.target.classList.contains('row-resize-handle')) {
+        e.preventDefault();
+        e.stopPropagation();
+        resizingRow = parseInt(e.target.dataset.row, 10);
+        startY = e.clientY;
+
+        const sheet = this.app.workbook.getActiveSheet();
+        startHeight = sheet.rowHeights && sheet.rowHeights[resizingRow] ? sheet.rowHeights[resizingRow] : 24;
+        document.body.style.cursor = 'row-resize';
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (resizingCol !== null) {
+        const diffX = e.clientX - startX;
+        const newW = Math.max(35, startWidth + diffX);
+        const sheet = this.app.workbook.getActiveSheet();
+        if (!sheet.colWidths) sheet.colWidths = {};
+        sheet.colWidths[resizingCol] = newW;
+
+        // Live DOM Column Width Update
+        const colHeader = document.querySelector(`.grid-col-header[data-col="${resizingCol}"]`);
+        if (colHeader) {
+          colHeader.style.width = `${newW}px`;
+          colHeader.style.minWidth = `${newW}px`;
+        }
+        document.querySelectorAll(`.grid-cell[data-col="${resizingCol}"]`).forEach(cell => {
+          cell.style.width = `${newW}px`;
+          cell.style.minWidth = `${newW}px`;
+        });
+      } else if (resizingRow !== null) {
+        const diffY = e.clientY - startY;
+        const newH = Math.max(18, startHeight + diffY);
+        const sheet = this.app.workbook.getActiveSheet();
+        if (!sheet.rowHeights) sheet.rowHeights = {};
+        sheet.rowHeights[resizingRow] = newH;
+
+        // Live DOM Row Height Update
+        const tr = document.querySelector(`tr[data-row="${resizingRow}"]`);
+        if (tr) {
+          tr.style.height = `${newH}px`;
+        }
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (resizingCol !== null || resizingRow !== null) {
+        if (resizingCol !== null) {
+          this.app.workbook.pushUndoState('Resize Column');
+        } else if (resizingRow !== null) {
+          this.app.workbook.pushUndoState('Resize Row');
+        }
+        resizingCol = null;
+        resizingRow = null;
+        document.body.style.cursor = '';
+        this.render();
+        this.app.autoSaveEngine?.triggerSave();
+      }
+    });
   }
 
   // --- In-Cell Editing Model (MS Excel Style) ---
@@ -512,6 +590,7 @@ class GridEngine {
       const th = document.createElement('th');
       th.className = 'grid-col-header';
       th.dataset.col = c;
+      th.style.position = 'relative';
 
       const customW = sheet.colWidths && sheet.colWidths[c];
       th.style.width = customW ? `${customW}px` : '110px';
@@ -519,15 +598,17 @@ class GridEngine {
 
       const colLetter = FormulaEngine.colToLetter(c);
       th.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:center;position:relative;">
+        <div style="display:flex;align-items:center;justify-content:center;position:relative;height:100%;">
           <span>${colLetter}</span>
           ${sheet.autoFilterRange && c >= sheet.autoFilterRange.startCol && c <= sheet.autoFilterRange.endCol ? `
             <span class="col-filter-btn" title="Filter" onclick="event.stopPropagation(); window.zeroCellApp.dataTools.openFilterDropdown(${c}, event.clientX, event.clientY)">▾</span>
           ` : ''}
         </div>
+        <div class="col-resize-handle" data-col="${c}"></div>
       `;
 
-      th.onclick = () => {
+      th.onclick = (e) => {
+        if (e.target.classList.contains('col-resize-handle')) return;
         sheet.selection = { startCol: c, startRow: 0, endCol: c, endRow: sheet.numRows - 1 };
         sheet.activeCell = { col: c, row: 0 };
         this.updateSelectionVisuals();
@@ -568,9 +649,14 @@ class GridEngine {
       const rowTh = document.createElement('th');
       rowTh.className = 'grid-row-header';
       rowTh.dataset.row = r;
-      rowTh.textContent = r + 1;
+      rowTh.style.position = 'relative';
+      rowTh.innerHTML = `
+        <span>${r + 1}</span>
+        <div class="row-resize-handle" data-row="${r}"></div>
+      `;
 
-      rowTh.onclick = () => {
+      rowTh.onclick = (e) => {
+        if (e.target.classList.contains('row-resize-handle')) return;
         sheet.selection = { startCol: 0, startRow: r, endCol: sheet.numCols - 1, endRow: r };
         sheet.activeCell = { col: 0, row: r };
         this.updateSelectionVisuals();
