@@ -179,9 +179,45 @@ class AutoSaveEngine {
       // 1. Unlimited IndexedDB Save
       ZeroStorage.saveProject(projectData);
 
-      // 2. Fast Session Memory
+      // 2. Fast Session Memory & Live Excel Binary Cache
       try {
         sessionStorage.setItem('0cell_current_active_proj', JSON.stringify(projectData));
+        
+        // Auto-generate live native Excel (.xlsx) payload in background
+        if (this.app.xlsxIO && typeof XLSX !== 'undefined') {
+          setTimeout(() => {
+            try {
+              const wb = XLSX.utils.book_new();
+              this.app.workbook.sheets.forEach(sheet => {
+                const wsData = [];
+                let maxC = 0, maxR = 0;
+                Object.keys(sheet.cells).forEach(key => {
+                  const [c, r] = key.split(',').map(Number);
+                  if (c > maxC) maxC = c;
+                  if (r > maxR) maxR = r;
+                });
+                for (let r = 0; r <= maxR; r++) {
+                  const rowData = [];
+                  for (let c = 0; c <= maxC; c++) {
+                    const cell = sheet.getCell(c, r);
+                    if (cell) {
+                      if (cell.formula) rowData.push({ f: cell.formula.startsWith('=') ? cell.formula.substring(1) : cell.formula });
+                      else if (cell.value !== undefined) rowData.push(cell.value);
+                      else rowData.push('');
+                    } else rowData.push('');
+                  }
+                  wsData.push(rowData);
+                }
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                if (sheet.merges && sheet.merges.length > 0) {
+                  ws['!merges'] = sheet.merges.map(m => ({ s: { r: m.startRow, c: m.startCol }, e: { r: m.endRow, c: m.endCol } }));
+                }
+                XLSX.utils.book_append_sheet(wb, ws, sheet.name.substring(0, 31));
+              });
+              this.lastExcelWorkbook = wb;
+            } catch (err) {}
+          }, 50);
+        }
       } catch (e) {}
 
       if (this.statusDot) this.statusDot.className = 'doc-status-dot saved';
@@ -389,7 +425,7 @@ class ZeroCellApp {
     console.log('0cell Multi-Project Spreadsheet ready with Instant Real-Time Auto-Save.');
   }
 
-  // Global Drag & Drop of XLSX, 0Cell, CSV files
+  // Global Drag & Drop of XLSX, 0Cell, CSV files with Live File Handle Binding
   bindDragAndDrop() {
     window.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -401,11 +437,13 @@ class ZeroCellApp {
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
         const file = files[0];
+        this.activeFileHandle = file;
         const fileNameLower = file.name.toLowerCase();
         if (fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.ods')) {
           const reader = new FileReader();
           reader.onload = (evt) => {
             this.xlsxIO.importXLSX(evt.target.result, file.name);
+            this.setupLiveFileWatcher(file);
           };
           reader.readAsArrayBuffer(file);
         } else if (fileNameLower.endsWith('.0cell') || fileNameLower.endsWith('.json')) {
@@ -418,11 +456,31 @@ class ZeroCellApp {
           const reader = new FileReader();
           reader.onload = (evt) => {
             this.xlsxIO.importCSV(evt.target.result);
+            this.setupLiveFileWatcher(file);
           };
           reader.readAsText(file);
         }
       }
     });
+  }
+
+  // Setup Live File Watcher: Polling for local Excel changes to sync instantly into 0cell
+  setupLiveFileWatcher(file) {
+    if (!file || !file.lastModified) return;
+    if (this._fileWatcherInterval) clearInterval(this._fileWatcherInterval);
+
+    let lastKnownTime = file.lastModified;
+    this._fileWatcherInterval = setInterval(async () => {
+      if (this.activeFileHandle && this.activeFileHandle.lastModified > lastKnownTime) {
+        lastKnownTime = this.activeFileHandle.lastModified;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          this.xlsxIO.importXLSX(evt.target.result, file.name);
+          this.showToast(`🔄 Live Sync: Excel updates imported into 0cell!`, 'info');
+        };
+        reader.readAsArrayBuffer(this.activeFileHandle);
+      }
+    }, 2000);
   }
 
   // Initialize a completely clean, pristine, empty spreadsheet
