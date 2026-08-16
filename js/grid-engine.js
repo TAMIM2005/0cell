@@ -542,7 +542,21 @@ class GridEngine {
     this.app.workbook.pushUndoState('Edit Cell');
     sheet.setCellValue(active.col, active.row, newVal);
 
-    // Move active cell
+    // Instant Single Cell DOM Update (No full table re-render lag!)
+    const targetTd = document.querySelector(`.grid-cell[data-col="${active.col}"][data-row="${active.row}"]`);
+    if (targetTd) {
+      const cell = sheet.getCell(active.col, active.row);
+      let displayVal = cell ? (cell.formula ? this.app.formulaEngine.evaluate(cell.formula, sheet.name) : cell.value) : '';
+      if (displayVal === null || displayVal === undefined) displayVal = '';
+      if (cell?.style?.format === 'currency' && !isNaN(displayVal) && displayVal !== '') {
+        displayVal = `$${Number(displayVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      } else if (cell?.style?.format === 'percent' && !isNaN(displayVal) && displayVal !== '') {
+        displayVal = `${(Number(displayVal) * 100).toFixed(2)}%`;
+      }
+      targetTd.textContent = displayVal;
+    }
+
+    // Move active cell & update selection visuals instantly
     if (rowDelta !== 0 || colDelta !== 0) {
       const nextR = Math.min(sheet.numRows - 1, Math.max(0, active.row + rowDelta));
       const nextC = Math.min(sheet.numCols - 1, Math.max(0, active.col + colDelta));
@@ -550,9 +564,14 @@ class GridEngine {
       sheet.selection = { startCol: nextC, startRow: nextR, endCol: nextC, endRow: nextR };
     }
 
-    this.render();
+    this.updateSelectionVisuals();
     this.updateFormulaBar();
-    this.app.autoSaveEngine?.triggerSave();
+    
+    // Asynchronous Debounced Auto-Save (Zero Lag)
+    if (this._debounceSaveTimer) clearTimeout(this._debounceSaveTimer);
+    this._debounceSaveTimer = setTimeout(() => {
+      this.app.autoSaveEngine?.saveInstant();
+    }, 400);
   }
 
   cancelCellEdit() {
