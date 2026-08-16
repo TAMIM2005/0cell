@@ -1,0 +1,6 @@
+# Cloudflare Pages / Workers static deployment configuration
+# Ignore local compiled Windows binaries and temporary files
+0Cell.exe
+CreateShortcut.ps1
+.DS_Store
+Thumbs.db

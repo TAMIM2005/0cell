@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>0cell - Next-Gen Modern Spreadsheet</title>
+  <link rel="icon" href="0C.ico">
+  <link rel="shortcut icon" href="0C.ico">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/modern-theme.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Top Header Navigation -->
+    <header class="top-nav">
+      <div class="nav-brand-group">
+        <img src="0C.webp" class="brand-icon-img" alt="0cell icon">
+        <span class="brand-badge">0cell</span>
+        <div class="doc-name-badge" title="Real-time Instant Auto-Save Active">
+          <div class="doc-status-dot" id="autosave-dot" title="Saved automatically"></div>
+          <input type="text" class="doc-name-input" id="doc-name-input" value="Untitled Spreadsheet" title="Click to rename document">
+          <span class="autosave-label" id="autosave-label" style="font-size:11px; font-weight:600; color:#10b981; margin-left:6px; user-select:none;">Saved</span>
+        </div>
+      </div>
+
+      <div class="nav-actions-group">
+        <button class="nav-pill-btn" id="btn-undo" title="Undo (Ctrl+Z)">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 103-7.7L3 7"/></svg>
+          <span>Undo</span>
+        </button>
+        <button class="nav-pill-btn" id="btn-redo" title="Redo (Ctrl+Y)">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M21 13a9 9 0 11-3-7.7L21 7"/></svg>
+          <span>Redo</span>
+        </button>
+        <button class="nav-pill-btn" id="btn-recent-workbooks" title="Recent Workbooks & Projects">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Recent Files</span>
+        </button>
+        <button class="nav-pill-btn primary" id="btn-file-menu" title="Open / Save / Export">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span>File & Export</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Modern Segmented Action Toolbar -->
+    <section class="action-toolbar">
+      <!-- 0. Clipboard Capsule (Copy, Cut, Paste) -->
+      <div class="tool-segment">
+        <button class="tool-btn" id="btn-tool-copy" title="Copy Selection (Ctrl+C)">
+          <span>📋 Copy</span>
+        </button>
+        <button class="tool-btn" id="btn-tool-cut" title="Cut Selection (Ctrl+X)">
+          <span>✂️ Cut</span>
+        </button>
+        <button class="tool-btn" id="btn-tool-paste" title="Paste from Clipboard (Ctrl+V)">
+          <span>📥 Paste</span>
+        </button>
+      </div>
+
+
+
+      <!-- 2. Duplicate Management Suite (Hero Segment) -->
+      <div class="tool-segment glow-dup">
+        <button class="tool-btn btn-dup-hero" id="btn-tool-highlight-dup" title="Find & Highlight All Duplicate Cells in Selection">
+          <span>⚡ Highlight Dups</span>
+        </button>
+      </div>
+
+      <!-- 3. Formulas & AutoSum -->
+      <div class="tool-segment">
+        <button class="tool-btn" id="btn-tool-autosum" title="Insert AutoSum Formula">
+          <span style="font-weight:700;color:var(--brand-primary);">∑ AutoSum</span>
+        </button>
+        <button class="tool-btn icon-only" id="btn-tool-autoavg" title="Insert Average">Avg</button>
+        <button class="tool-btn icon-only" id="btn-tool-autocount" title="Insert Count">Cnt</button>
+        <button class="tool-btn icon-only" id="btn-tool-automax" title="Insert Max">Max</button>
+        <button class="tool-btn icon-only" id="btn-tool-automin" title="Insert Min">Min</button>
+      </div>
+
+      <!-- 4. Data & Filter -->
+      <div class="tool-segment">
+        <button class="tool-btn" id="btn-tool-autofilter" title="Toggle AutoFilter on Headers">
+          <span>🔽 Filter</span>
+        </button>
+        <button class="tool-btn icon-only" id="btn-tool-sort-asc" title="Sort A to Z">A-Z</button>
+        <button class="tool-btn icon-only" id="btn-tool-sort-desc" title="Sort Z to A">Z-A</button>
+        <button class="tool-btn" id="btn-tool-find" title="Find & Replace (Ctrl+F)">
+          <span>🔍 Find</span>
+        </button>
+      </div>
+
+      <!-- 5. Formatting & Merge -->
+      <div class="tool-segment">
+        <button class="tool-btn" id="btn-fmt-merge" title="Merge & Center or Unmerge Selected Cells">
+          <span>⊞ Merge</span>
+        </button>
+        <button class="tool-btn icon-only" id="btn-fmt-bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button class="tool-btn icon-only" id="btn-fmt-italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button class="tool-btn icon-only" id="btn-fmt-underline" title="Underline (Ctrl+U)"><u>U</u></button>
+        <!-- Google Sheets Style Fill Color Dropdown Trigger -->
+        <div class="color-picker-dropdown-wrap" id="fill-color-wrap" style="position:relative;">
+          <button class="tool-btn fill-color-btn" id="btn-fmt-fill" title="Fill Color (Google Sheets Style)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5zM2.81 14.12l8.59-8.59a1.996 1.996 0 0 1 2.83 0l3.07 3.07a1.996 1.996 0 0 1 0 2.83l-8.59 8.59c-.78.78-2.05.78-2.83 0l-3.07-3.07a1.996 1.996 0 0 1 0-2.83zm10.01-7.17L4.22 15.54l3.07 3.07 8.59-8.59-3.06-3.07z"/>
+            </svg>
+            <div class="color-stripe" id="fill-color-stripe" style="background:#fef08a;"></div>
+            <span class="dropdown-caret">▾</span>
+          </button>
+          
+          <!-- Popover Palette -->
+          <div class="gsheet-color-popover" id="fill-color-popover">
+            <div class="gsheet-popover-header">
+              <button class="gsheet-reset-btn" id="btn-fill-reset" title="Clear / Reset fill color">
+                <span class="reset-icon">🚫</span>
+                <span>Reset (None)</span>
+              </button>
+            </div>
+            <div class="gsheet-palette-grid" id="gsheet-fill-palette"></div>
+            <div class="gsheet-custom-row">
+              <span class="custom-label">CUSTOM</span>
+              <button class="custom-add-btn" id="btn-fill-custom" title="Choose custom color">+</button>
+              <input type="color" id="color-picker-bg" value="#fef08a" style="position:absolute; opacity:0; pointer-events:none;">
+            </div>
+          </div>
+        </div>
+        <button class="tool-btn icon-only" id="btn-fmt-color" title="Font Color">A</button>
+        <input type="color" id="color-picker-font" value="#e11d48" style="display:none;">
+        <button class="tool-btn icon-only" id="btn-fmt-currency" title="Currency ($)">$</button>
+        <button class="tool-btn icon-only" id="btn-fmt-percent" title="Percentage (%)">%</button>
+        <button class="tool-btn icon-only" id="btn-align-left" title="Align Left">⇤</button>
+        <button class="tool-btn icon-only" id="btn-align-center" title="Align Center">≡</button>
+        <button class="tool-btn icon-only" id="btn-align-right" title="Align Right">⇥</button>
+      </div>
+
+      <!-- 6. Charts -->
+      <div class="tool-segment">
+        <button class="tool-btn" id="btn-insert-chart" title="Insert Interactive Chart">
+          <span>📊 Chart</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Formula Bar -->
+    <div class="formula-bar-container">
+      <input type="text" class="name-box" id="name-box" value="A1" readonly>
+      <span class="fx-symbol">fx</span>
+      <div class="formula-input-wrap">
+        <input type="text" class="formula-input" id="formula-input" placeholder="Type a value or formula e.g. =SUM(A1:A10), =VLOOKUP(D2, A1:B10, 2, FALSE)">
+      </div>
+    </div>
+
+    <!-- Main Grid Workspace -->
+    <main class="grid-workspace">
+      <div class="spreadsheet-wrapper" id="spreadsheet-wrapper" tabindex="0">
+        <div id="grid-container"></div>
+        <div class="charts-layer" id="charts-layer"></div>
+      </div>
+    </main>
+
+    <!-- Bottom Sheet Tabs Bar (Google Sheets / Excel Style) -->
+    <footer class="sheets-bar">
+      <div class="sheets-left-controls">
+        <button class="sheet-control-btn" id="btn-add-sheet" title="Add Sheet">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="sheet-control-btn" id="btn-all-sheets" title="All Sheets">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+
+      <div class="sheet-tabs-scroll-viewport" id="sheet-tabs-viewport">
+        <div id="sheets-tabs-container" class="sheets-tabs-container"></div>
+      </div>
+
+      <div class="sheet-right-controls">
+        <button class="sheet-control-btn" id="btn-scroll-sheets-left" title="Scroll Left">‹</button>
+        <button class="sheet-control-btn" id="btn-scroll-sheets-right" title="Scroll Right">›</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Right Click Context Menu -->
+  <div class="context-menu" id="grid-context-menu"></div>
+  <div class="dropdown-menu" id="filter-dropdown-menu"></div>
+
+  <!-- Global Modal Overlay -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div id="modal-container"></div>
+  </div>
+
+  <!-- Modern File Menu Modal -->
+  <div class="modal-overlay" id="file-menu-modal">
+    <div class="modal-dialog" style="width: 420px;">
+      <div class="modal-header">
+        <span>0cell File & Export Manager</span>
+        <button class="modal-close-btn" id="file-close-modal">&times;</button>
+      </div>
+      <div class="modal-body" style="gap: 10px;">
+        <button class="btn-secondary" id="file-new" style="text-align:left;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📄</span>
+          <div>
+            <div style="font-weight:600;">New Workbook</div>
+            <div style="font-size:11px;color:var(--text-muted);">Create an empty fresh spreadsheet</div>
+          </div>
+        </button>
+        <button class="btn-secondary" id="file-open" style="text-align:left;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📂</span>
+          <div>
+            <div style="font-weight:600;">Open Excel / CSV (.xlsx, .xls, .csv)...</div>
+            <div style="font-size:11px;color:var(--text-muted);">Import with full styles, colors, and sheets</div>
+          </div>
+        </button>
+        <input type="file" id="file-input-open" accept=".xlsx,.xls,.ods,.0cell,.json,.csv,.tsv,.txt" style="display:none;">
+
+        <button class="btn-secondary" id="file-open-recents" style="text-align:left;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">🕒</span>
+          <div>
+            <div style="font-weight:600;">Recent Workbooks & Projects...</div>
+            <div style="font-size:11px;color:var(--text-muted);">Browse, search, and open past spreadsheets</div>
+          </div>
+        </button>
+
+        <div class="menu-divider"></div>
+        <button class="btn-primary" id="file-save-0cell" style="text-align:left;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">💾</span>
+          <div>
+            <div style="font-weight:600;">Save .0cell Native Project</div>
+            <div style="font-size:11px;opacity:0.85;">Preserve all formulas, charts, and structure</div>
+          </div>
+        </button>
+        <button class="btn-secondary" id="file-export-excel" style="text-align:left;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📊</span>
+          <div>
+            <div style="font-weight:600;">Export to Excel (.xlsx)</div>
+            <div style="font-size:11px;color:var(--text-muted);">Download Microsoft Excel compatible workbook</div>
+          </div>
+        </button>
+        <button class="btn-secondary" id="file-export-csv" style="text-align:left;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📑</span>
+          <div>
+            <div style="font-weight:600;">Export to CSV</div>
+            <div style="font-size:11px;color:var(--text-muted);">Standard tabular comma-separated values</div>
+          </div>
+        </button>
+        <button class="btn-secondary" id="file-print" style="text-align:left;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">🖨️</span>
+          <div>
+            <div style="font-weight:600;">Print / Save as PDF</div>
+            <div style="font-size:11px;color:var(--text-muted);">Export print-ready document</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated High-Capacity Recent Workbooks Manager Modal -->
+  <div class="modal-overlay" id="recent-manager-modal">
+    <div class="modal-dialog" style="width: 580px; max-width: 94vw;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:17px;">🕒</span>
+          <span>Recent Workbooks & Projects</span>
+        </div>
+        <button class="modal-close-btn" id="recent-close-modal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px 20px; gap: 12px;">
+        <!-- Search Input -->
+        <div style="position:relative;">
+          <input type="text" id="recent-search-input" placeholder="Search workbooks by name..." style="width:100%; padding:9px 12px 9px 34px; background:var(--bg-app); border:1px solid var(--border-default); border-radius:var(--radius-md); font-size:12px; color:var(--text-primary); outline:none; box-sizing:border-box;">
+          <span style="position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--text-muted); pointer-events:none;">🔍</span>
+        </div>
+        <!-- Workbooks List -->
+        <div id="recent-manager-list" style="display:flex; flex-direction:column; gap:6px; max-height:360px; overflow-y:auto; padding-right:4px;">
+          <!-- Dynamic items rendered here -->
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn-secondary" id="btn-clear-recent-history" style="color:#ef4444; border-color:#fca5a5; font-size:11px;">
+          <span>🗑️ Clear History</span>
+        </button>
+        <button class="btn-secondary" id="recent-footer-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/jszip.min.js"></script>
+  <script src="js/xlsx.full.min.js"></script>
+  <script src="js/formula-engine.js"></script>
+  <script src="js/duplicate-tools.js"></script>
+  <script src="js/data-tools.js"></script>
+  <script src="js/chart-engine.js"></script>
+  <script src="js/xlsx-io.js"></script>
+  <script src="js/grid-engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
