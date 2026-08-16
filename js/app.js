@@ -437,11 +437,19 @@ class ZeroCellApp {
     this.autoSaveEngine.init();
 
     // Fast session restore or clean blank sheet
-    const restored = await this.autoSaveEngine.restoreSession();
-    if (!restored) {
-      this.initBlankSheet();
-      this.updateSheetsTabBar();
+    let restored = false;
+    try {
+      restored = await this.autoSaveEngine.restoreSession();
+    } catch (e) {
+      console.warn('Session restore failed:', e);
     }
+    
+    if (!restored || !this.workbook.getActiveSheet() || Object.keys(this.workbook.getActiveSheet().cells || {}).length === 0) {
+      this.initBlankSheet();
+    }
+    
+    this.updateSheetsTabBar();
+    this.gridEngine.render();
 
     console.log('0cell Multi-Project Spreadsheet ready with Instant Real-Time Auto-Save.');
   }
